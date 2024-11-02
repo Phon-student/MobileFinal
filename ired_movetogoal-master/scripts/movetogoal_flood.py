@@ -63,8 +63,10 @@ def flood_fill(start, targets):
     return path
 
 def convert_grid_to_real_world(grid_pos):
+    # def convert_to_real_world_cord(x,y):
+    #     return -1 * x + 3, -1 * y + 1
     """Convert grid coordinates to real-world coordinates."""
-    return grid_pos[0] * cell_size, grid_pos[1] * cell_size  # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
+    return -1 * grid_pos[0] * cell_size + 3, -1 * grid_pos[1] * cell_size + 1 # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
 
 def pose_callback(pose_with_covariance):
     """Callback for AMCL pose updates."""
@@ -126,14 +128,10 @@ def main():
     # Set initial moves (for example: [(row, col), ...])
     initial_moves = [(3, 0), (2, 0)]  # Customize the initial positions as needed
 
-    # Execute initial moves
+    # Execute initial moves - simulated
     for grid_cell in initial_moves:
         x, y = convert_grid_to_real_world(grid_cell)
-        theta = 0.0  # Adjust orientation if necessary
-        if mba.moveToPoint(x, y, theta):
-            rospy.loginfo(f"Reached initial grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
-        else:
-            rospy.logwarn(f"Failed to reach initial grid cell {grid_cell}")
+        print(f"Simulated move to initial grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
         rospy.sleep(1)  # Small delay between moves
 
     # Find all target locations
@@ -142,29 +140,27 @@ def main():
     # Perform flood fill to generate the path
     path = flood_fill(start_pos, targets)
 
-    # Follow the path
+    # Simulate following the path
     for grid_cell in path:
         x, y = convert_grid_to_real_world(grid_cell)
-        theta = 0.0  # Assuming no rotation needed initially; adjust if required
-        if mba.moveToPoint(x, y, theta):
-            rospy.loginfo(f"Reached grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
-            rospy.sleep(5)  # Allow some time between movements
-        else:
-            rospy.logwarn(f"Failed to reach grid cell {grid_cell}")
-        rospy.sleep(1)  # Allow some time between movements
+        print(f"Simulated move to grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
+        rospy.sleep(1)  # Allow some time between simulated movements
 
-    # End move at the final destination
+    # Simulate end move at the final destination
     end_move = [(2, 0), (3, 0), (3, 1)]  # Customize the end move position as desired
     for grid_cell in end_move:
         x, y = convert_grid_to_real_world(grid_cell)
-        if mba.moveToPoint(x, y, 0.0):
-            rospy.loginfo(f"Reached the end move position at ({x:.2f}, {y:.2f})")
-        else:
-            rospy.logwarn("Failed to reach the end move position.")
-        rospy.sleep(1)  # Allow some time between movements
+        print(f"Simulated move to end position at ({x:.2f}, {y:.2f})")
+        rospy.sleep(1)  # Allow some time between simulated movements
 
     rospy.loginfo("Path traversal and end move completed.")
     rospy.sleep(1)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == '__main__':
     try:
