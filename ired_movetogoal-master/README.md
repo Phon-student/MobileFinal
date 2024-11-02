@@ -17,3 +17,11 @@ $ roslaunch ired_movetogoal movetogoal.launch
 ```sh
 $ roslaunch ired_rviz navigation.launch
 ``` 
+
+
+## option on movetogoal script
+- movetogoal_convex
+- movetogoal_flood
+- movetogoal_nack(flood fill and convex as an options variables)
+- movetogoal (original script)
+change the script option in launch file
