@@ -11,7 +11,6 @@ from geometry_msgs.msg import Pose, Point, PoseStamped, PoseWithCovarianceStampe
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 import actionlib
 from collections import deque
-from scipy.spatial import ConvexHull
 import numpy as np
 
 # Grid configuration (0: free, 1: obstacle, 2: target, 3: end move)
@@ -97,14 +96,34 @@ def flood_fill(start, targets):
 
     return path
 
+def cross(o, a, b):
+    """Calculate the cross product of vectors OA and OB."""
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+def graham_scan(points):
+    """Calculate the convex hull using Graham's scan."""
+    points = sorted(set(points))
+    lower = []
+    for p in points:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+
+    upper = []
+    for p in reversed(points):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+
+    return lower[:-1] + upper[:-1]
+
 def convex_hull_path(points):
-    """Calculate the convex hull for a set of points."""
-    points_array = np.array(points)
-    hull = ConvexHull(points_array)
-    return [points_array[vertex] for vertex in hull.vertices]
+    """Calculate the convex hull for a set of points using Graham's scan."""
+    return graham_scan(points)
 
 def main():
     rospy.init_node('move_to_goal', anonymous=True)
+    publisher_goal = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
     rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, pose_callback)
     rospy.Subscriber('/move_base/status', GoalStatusArray, move_base_status_callback)
     rospy.Subscriber('/move_base/result', MoveBaseActionResult, move_base_result_callback)

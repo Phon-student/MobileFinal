@@ -10,9 +10,9 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResul
 from geometry_msgs.msg import Pose, Point, PoseStamped, PoseWithCovarianceStamped, Quaternion
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 import actionlib
-from scipy.spatial import ConvexHull
 import numpy as np
 import math
+from collections import deque
 
 # Grid configuration (0: free, 1: obstacle, 2: target, 3: end move)
 grid = [
@@ -80,9 +80,31 @@ class moveBaseAction():
             self.move_base_action.cancel_goal()
             return False
 
+def cross(o, a, b):
+    """Calculate the cross product of vectors OA and OB."""
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+def graham_scan(points):
+    """Calculate the convex hull using Graham's scan."""
+    points = sorted(set(points))
+    lower = []
+    for p in points:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+
+    upper = []
+    for p in reversed(points):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+
+    return lower[:-1] + upper[:-1]
+
 # Main program
 def main():
     rospy.init_node('move_to_goal', anonymous=True)
+    publisher_goal = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
     rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, pose_callback)
     rospy.Subscriber('/move_base/status', GoalStatusArray, move_base_status_callback)
     rospy.Subscriber('/move_base/result', MoveBaseActionResult, move_base_result_callback)
@@ -109,9 +131,7 @@ def main():
 
     # Compute the convex hull for target locations
     if len(target_points) > 2:  # Convex hull requires at least 3 points
-        points_array = np.array(target_points)
-        hull = ConvexHull(points_array)
-        hull_path = [points_array[vertex] for vertex in hull.vertices]
+        hull_path = graham_scan(target_points)
     else:
         hull_path = target_points  # If only two points, just go between them
 
