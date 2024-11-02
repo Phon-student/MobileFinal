@@ -85,13 +85,10 @@ class moveBaseAction():
 def cross(o, a, b):
     """Calculate the cross product of vectors OA and OB."""
     return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-def graham_scan(points):
-    """Calculate the convex hull using Graham's scan and return the count of boundary points."""
-    # Ensure we work with unique points
-    points = sorted(set(points), key=lambda p: (p[0], p[1]))  # Sort by x and y coordinates
-    if len(points) < 3:
-        return points, len(points)  # Not enough points to form a convex hull
 
+def graham_scan(points):
+    """Calculate the convex hull using Graham's scan."""
+    points = sorted(set(points))
     lower = []
     for p in points:
         while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
@@ -104,9 +101,19 @@ def graham_scan(points):
             upper.pop()
         upper.append(p)
 
-    # Combine lower and upper hulls, exclude the last point of each half because it's repeated
-    convex_hull = lower[:-1] + upper[:-1]
-    return convex_hull, len(convex_hull)  # Return the convex hull and its boundary count
+    hull = lower[:-1] + upper[:-1]  # Combine lower and upper hull
+
+    # Interpolate to create new points if fewer than 5
+    if len(hull) < 5:
+        while len(hull) < 5:
+            for i in range(len(hull) - 1):
+                if len(hull) >= 5:
+                    break
+                # Insert midpoint between consecutive points
+                midpoint = ((hull[i][0] + hull[i + 1][0]) / 2, (hull[i][1] + hull[i + 1][1]) / 2)
+                hull.insert(i + 1, midpoint)
+
+    return hull
 
 # Main program
 def main():
