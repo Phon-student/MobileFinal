@@ -31,22 +31,14 @@ cell_size = 1.0  # approximately 1x1 meter grid cells
 current_pose = None  # Global variable to store the current pose
 
 def convert_grid_to_real_world(grid_pos):
-    # def convert_to_real_world_cord(x,y):
-    #     return -1 * x + 3, -1 * y + 1
     """Convert grid coordinates to real-world coordinates."""
-    return -1 * grid_pos[0] * cell_size + 3, -1 * grid_pos[1] * cell_size + 1 # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
+    return -1 * grid_pos[0] * cell_size + 3, -1 * grid_pos[1] * cell_size + 1  # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
 
 def pose_callback(pose_with_covariance):
     """Callback to update current robot pose."""
     global current_pose
     pose = pose_with_covariance.pose.pose
     current_pose = (pose.position.x, pose.position.y, pose.orientation.z)  # You may want to use a full orientation quaternion for more accuracy
-
-def calculate_angle_to_target(current_x, current_y, target_x, target_y):
-    """Calculate the angle in radians from the robot to the target."""
-    dx = target_x - current_x
-    dy = target_y - current_y
-    return math.atan2(dy, dx)
 
 def move_base_status_callback(status):
     """Callback for move base status updates."""
@@ -61,27 +53,26 @@ class moveBaseAction():
         self.move_base_action = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
         self.move_base_action.wait_for_server(rospy.Duration(5))
 
-    def createGoal(self, x, y, theta):
-        quat = tf.transformations.quaternion_from_euler(0, 0, theta)
+    def createGoal(self, x, y):
+        quat = tf.transformations.quaternion_from_euler(0, 0, 0)  # Fixed orientation
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = 'map'
         goal.target_pose.header.stamp = rospy.Time.now()
-        # goal.target_pose.pose = Pose(Point(x, y, 0.000), Quaternion(quat[0], quat[1], quat[2], quat[3]))
-        goal.target_pose.pose = Pose(Point(x, y, 0.000), Quaternion(0, 0, 0, 1))  # Fixed orientation
+        goal.target_pose.pose = Pose(Point(x, y, 0.000), Quaternion(quat[0], quat[1], quat[2], quat[3]))
+
         return goal
 
-    def moveToPoint(self, x, y, theta):
-        target_point = self.createGoal(x, y, theta)
+    def moveToPoint(self, x, y):
+        target_point = self.createGoal(x, y)
         self.moveToGoal(target_point)
 
     def moveToGoal(self, goal):
         self.move_base_action.send_goal(goal)
         success = self.move_base_action.wait_for_result()
         state = self.move_base_action.get_state()
-        print("Move to %f, %f, %f ->" % (
+        print("Move to %f, %f ->" % (
             goal.target_pose.pose.position.x,
-            goal.target_pose.pose.position.y,
-            goal.target_pose.pose.orientation.z
+            goal.target_pose.pose.position.y
         ))
         if success and state == GoalStatus.SUCCEEDED:
             print(" Complete")
@@ -129,8 +120,7 @@ def main():
     # Execute initial moves
     for grid_cell in initial_moves:
         x, y = convert_grid_to_real_world(grid_cell)
-        theta = 0.0  # Adjust orientation if necessary
-        if mba.moveToPoint(x, y, theta):
+        if mba.moveToPoint(x, y):
             rospy.loginfo(f"Reached initial grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
         else:
             rospy.logwarn(f"Failed to reach initial grid cell {grid_cell}")
@@ -149,20 +139,18 @@ def main():
     # Follow the convex hull path
     for point in hull_path:
         x, y = point
-        if current_pose:
-            theta = calculate_angle_to_target(current_pose[0], current_pose[1], x, y)
-            if mba.moveToPoint(x, y, theta):
-                rospy.loginfo(f"Reached convex hull point at ({x:.2f}, {y:.2f})")
-                rospy.sleep(5)  # Allow some time between movements
-            else:
-                rospy.logwarn(f"Failed to reach convex hull point at ({x:.2f}, {y:.2f})")
+        if mba.moveToPoint(x, y):
+            rospy.loginfo(f"Reached convex hull point at ({x:.2f}, {y:.2f})")
+            rospy.sleep(5)  # Allow some time between movements
+        else:
+            rospy.logwarn(f"Failed to reach convex hull point at ({x:.2f}, {y:.2f})")
         rospy.sleep(1)  # Allow some time between movements
 
     # End move at the final destination
     end_move = [(2, 0), (3, 0), (3, 1)]  # Customize the end move position as desired
     for grid_cell in end_move:
         x, y = convert_grid_to_real_world(grid_cell)
-        if mba.moveToPoint(x, y, 0.0):
+        if mba.moveToPoint(x, y):
             rospy.loginfo(f"Reached the end move position at ({x:.2f}, {y:.2f})")
         else:
             rospy.logwarn("Failed to reach the end move position.")
