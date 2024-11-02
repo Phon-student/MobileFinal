@@ -187,7 +187,8 @@ def main():
         x, y = point
         if mba.moveToPoint(x, y):
             rospy.loginfo(f"Reached convex hull point at ({x:.2f}, {y:.2f})")
-            rospy.sleep(5)  # Allow some time between movements
+            mba.move_base_action.cancel_goal()  # Cancel the goal to avoid waiting for completion
+            rospy.sleep(5)  # stop for 5 seconds at each point on the convex hull 
         else:
             rospy.logwarn(f"Failed to reach convex hull point at ({x:.2f}, {y:.2f})")
         rospy.sleep(1)  # Allow some time between movements
