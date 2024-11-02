@@ -159,6 +159,7 @@ def main():
         x, y = convert_to_real_world_cord(*grid_cell)
         if mba.moveToPoint(x, y, 0.0):
             rospy.loginfo(f"Reached the end move position at ({x:.2f}, {y:.2f})")
+            rospy.sleep(5)
         else:
             rospy.logwarn("Failed to reach the end move position.")
         rospy.sleep(1)
