@@ -82,38 +82,70 @@ class moveBaseAction():
             self.move_base_action.cancel_goal()
             return False
 
-def cross(o, a, b):
-    """Calculate the cross product of vectors OA and OB."""
-    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+def orientation(p, q, r):
+    """Return orientation of the triplet (p, q, r).
+    - 0 if p, q and r are collinear
+    - 1 if clockwise
+    - -1 if counterclockwise
+    """
+    val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
+    if val == 0:
+        return 0
+    return 1 if val > 0 else -1
 
-def graham_scan(points):
-    """Calculate the convex hull using Graham's scan."""
-    points = sorted(set(points))
-    lower = []
-    for p in points:
-        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
-            lower.pop()
-        lower.append(p)
+def gift_wrapping_hull(points):
+    """Gift Wrapping Algorithm (Jarvis March) to find the convex hull."""
+    n = len(points)
+    if n < 3:
+        return points  # Convex hull is undefined for fewer than 3 points
 
-    upper = []
-    for p in reversed(points):
-        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
-            upper.pop()
-        upper.append(p)
+    hull = []
+    
+    # Start with the leftmost point
+    leftmost = np.argmin(points[:, 0])
+    point_on_hull = leftmost
+    
+    while True:
+        hull.append(points[point_on_hull])
+        endpoint = (point_on_hull + 1) % n
+        for j in range(n):
+            # Check if 'j' is more counterclockwise than 'endpoint'
+            if orientation(points[point_on_hull], points[j], points[endpoint]) == -1:
+                endpoint = j
+        point_on_hull = endpoint
+        if point_on_hull == leftmost:
+            break
+    
+    return np.array(hull)
 
-    hull = lower[:-1] + upper[:-1]  # Combine lower and upper hull
+def fixed_five_point_hull(points, fixed=True):
+    """Get the convex hull points, optionally fixed to 5 points."""
+    hull_points = gift_wrapping_hull(points)
 
-    # Interpolate to create new points if fewer than 5
-    if len(hull) < 5:
-        while len(hull) < 5:
-            for i in range(len(hull) - 1):
-                if len(hull) >= 5:
+    if fixed:
+        # If hull has more than 5 points, reduce to 5 points
+        if len(hull_points) > 5:
+            selected_points = hull_points[::len(hull_points) // 5][:5]  # Select every nth point
+        elif len(hull_points) < 5:
+            # If fewer than 5, add points from the original set that aren’t in the hull
+            extra_points = []
+            for point in points:
+                if len(hull_points) + len(extra_points) >= 5:
                     break
-                # Insert midpoint between consecutive points
-                midpoint = ((hull[i][0] + hull[i + 1][0]) / 2, (hull[i][1] + hull[i + 1][1]) / 2)
-                hull.insert(i + 1, midpoint)
+                if not any(np.array_equal(point, hp) for hp in hull_points):
+                    extra_points.append(point)
+            selected_points = np.vstack([hull_points, extra_points[:5 - len(hull_points)]])
+        else:
+            selected_points = hull_points  # Exactly 5 points
+    else:
+        selected_points = hull_points  # Do not fix the number of points
 
-    return hull
+    # Sort selected points in counterclockwise order for consistent plotting
+    center = selected_points.mean(axis=0)
+    angles = np.arctan2(selected_points[:, 1] - center[1], selected_points[:, 0] - center[0])
+    selected_points = selected_points[np.argsort(angles)]
+
+    return selected_points
 
 # Main program
 def main():
@@ -140,16 +172,15 @@ def main():
 
     # Find all target locations in real-world coordinates
     target_cells = [(i, j) for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] == 2]
-    target_points = [convert_grid_to_real_world(cell) for cell in target_cells]
+    target_points = np.array([convert_grid_to_real_world(cell) for cell in target_cells])
 
     # Compute the convex hull for target locations
     if len(target_points) >= 3:  # Convex hull requires at least 3 points
-        hull_path, boundary_count = graham_scan(target_points)
-        rospy.loginfo(f"Convex hull computed with {boundary_count} boundary points.")
+        hull_path = fixed_five_point_hull(target_points, fixed=True)  # Use fixed 5-point hull option
+        rospy.loginfo(f"Convex hull computed with {len(hull_path)} boundary points.")
     else:
         hull_path = target_points  # If less than 3 points, just use available points
-        boundary_count = len(hull_path)
-        rospy.loginfo(f"Only {boundary_count} target points, no convex hull needed.")
+        rospy.loginfo(f"Only {len(hull_path)} target points, no convex hull needed.")
 
     # Follow the convex hull path
     for point in hull_path:
@@ -171,12 +202,10 @@ def main():
             rospy.logwarn("Failed to reach the end move position.")
         rospy.sleep(1)  # Allow some time between movements
 
-    rospy.loginfo("Path traversal and end move completed.")
-    rospy.sleep(1)
+    rospy.loginfo("Path traversal and convex hull navigation completed.")
 
 if __name__ == '__main__':
     try:
         main()
     except rospy.ROSInterruptException:
         pass
-
