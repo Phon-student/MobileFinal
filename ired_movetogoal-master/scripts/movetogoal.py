@@ -75,7 +75,6 @@ def convert_to_real_world_cord(x,y):
     return -1 * x + 3, -1 * y +1
 
 
-# Main program
 def main():
     global grid
     rospy.init_node('move_to_goal', anonymous=True)
@@ -84,24 +83,32 @@ def main():
     rospy.Subscriber('/move_base/status', GoalStatusArray, move_base_status_callback)
     rospy.Subscriber('/move_base/result', MoveBaseActionResult, move_base_result_callback)
 
-    # TODO
-
-    command = False
     mba = moveBaseAction()
+
     while not rospy.is_shutdown():
+        # Move to target locations in the grid
+        command = False  # Reset command for each loop
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if grid[i][j] == 2:  # Target found
+                    
+                    x, y = convert_to_real_world_cord(i, j)
+                    print(f"Moving to target at: ({x}, {y})")  # Log the target location
+                    success = mba.moveToPoint(x, y, 0)  # Move to the target point
+                    if success:
+                        print(f"Reached target at: ({x}, {y})")
+                    else:
+                        print(f"Failed to reach target at: ({x}, {y})")
+                    time.sleep(2)  # Wait for a moment after reaching a target
+                    command = True
+                    break
+            if command:  # Exit both loops if a command was executed
+                break
+        else:
+            # If no target found, you can either break or loop again after a delay
+            rospy.loginfo("No more targets to move to. Waiting...")
+            time.sleep(5)  # Wait before checking again
 
-        # goal destination (refer from grid[])
-        local_x = 0
-        local_y = 0
-        z = 0
-
-        #call function
-        x, y = convert_to_real_world_cord(local_x, local_y)
-        print(x, y, 0)
-        if not command:
-            command = True
-            mba.moveToPoint(x, y, z)
-        rospy.sleep(1)
 
 
 

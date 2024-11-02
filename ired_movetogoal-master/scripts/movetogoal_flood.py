@@ -128,16 +128,15 @@ def main():
     # Set initial moves (for example: [(row, col), ...])
     initial_moves = [(3, 0), (2, 0)]  # Customize the initial positions as needed
 
-    # Execute initial moves - simulated
+    # Execute initial moves
     for grid_cell in initial_moves:
         x, y = convert_grid_to_real_world(grid_cell)
         print(f"Simulated move to initial grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
         rospy.sleep(1)  # Small delay between moves
-
     # Find all target locations
     targets = [(i, j) for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] == 2]
 
-    # Perform flood fill to generate the path
+    # simulate flood fill to generate the path
     path = flood_fill(start_pos, targets)
 
     # After the path is calculated, follow the path
@@ -163,18 +162,6 @@ def main():
 
     rospy.loginfo("Path traversal and end move completed.")
     rospy.sleep(1)
-
-if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
-
-if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
 
 if __name__ == '__main__':
     try:

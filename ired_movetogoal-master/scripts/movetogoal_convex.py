@@ -31,8 +31,10 @@ cell_size = 1.0  # approximately 1x1 meter grid cells
 current_pose = None  # Global variable to store the current pose
 
 def convert_grid_to_real_world(grid_pos):
+    # def convert_to_real_world_cord(x,y):
+    #     return -1 * x + 3, -1 * y + 1
     """Convert grid coordinates to real-world coordinates."""
-    return grid_pos[0] * cell_size, grid_pos[1] * cell_size  # start from (0, 0) in the grid map 
+    return -1 * grid_pos[0] * cell_size + 3, -1 * grid_pos[1] * cell_size + 1 # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
 
 def pose_callback(pose_with_covariance):
     """Callback to update current robot pose."""
@@ -46,6 +48,14 @@ def calculate_angle_to_target(current_x, current_y, target_x, target_y):
     dy = target_y - current_y
     return math.atan2(dy, dx)
 
+def move_base_status_callback(status):
+    """Callback for move base status updates."""
+    pass
+
+def move_base_result_callback(result):
+    """Callback for move base result updates."""
+    pass
+
 class moveBaseAction():
     def __init__(self):
         self.move_base_action = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
@@ -56,7 +66,8 @@ class moveBaseAction():
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = 'map'
         goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose = Pose(Point(x, y, 0.000), Quaternion(quat[0], quat[1], quat[2], quat[3]))
+        # goal.target_pose.pose = Pose(Point(x, y, 0.000), Quaternion(quat[0], quat[1], quat[2], quat[3]))
+        goal.target_pose.pose = Pose(Point(x, y, 0.000), Quaternion(0, 0, 0, 1))  # Fixed orientation
         return goal
 
     def moveToPoint(self, x, y, theta):
