@@ -5,7 +5,6 @@ http://wiki.ros.org/actionlib
 """
 import rospy
 import tf.transformations
-import time
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 from geometry_msgs.msg import Pose, Point, PoseStamped, PoseWithCovarianceStamped, Quaternion
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
@@ -33,11 +32,12 @@ directions = [
 cell_size = 1.0  # approximately 1x1 meter grid cells
 
 def is_valid_move(x, y):
+    """Check if the move is valid (within bounds and not an obstacle)."""
     rows, cols = len(grid), len(grid[0])
     return 0 <= x < rows and 0 <= y < cols and grid[x][y] != 1
 
 def flood_fill(start, targets):
-    # Perform a BFS flood fill to reach all target cells
+    """Perform a BFS flood fill to reach all target cells."""
     queue = deque([start])
     visited = {start}
     path = []
@@ -64,7 +64,20 @@ def flood_fill(start, targets):
 
 def convert_grid_to_real_world(grid_pos):
     """Convert grid coordinates to real-world coordinates."""
-    return grid_pos[0] * cell_size, grid_pos[1] * cell_size # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
+    return grid_pos[0] * cell_size, grid_pos[1] * cell_size  # start from (0, 0) in the grid map converted to real-world coordinates of cartesian plane
+
+def pose_callback(pose_with_covariance):
+    """Callback for AMCL pose updates."""
+    pose = pose_with_covariance.pose.pose
+    print("amcl_pose = {x: %f, y: %f, orientation.z: %f}" % (pose.position.x, pose.position.y, pose.orientation.z))
+
+def move_base_status_callback(status):
+    """Callback for move base status updates."""
+    pass
+
+def move_base_result_callback(result):
+    """Callback for move base result updates."""
+    pass
 
 class moveBaseAction():
     def __init__(self):
@@ -103,7 +116,6 @@ class moveBaseAction():
 # Main program
 def main():
     rospy.init_node('move_to_goal', anonymous=True)
-    publisher_goal = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
     rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, pose_callback)
     rospy.Subscriber('/move_base/status', GoalStatusArray, move_base_status_callback)
     rospy.Subscriber('/move_base/result', MoveBaseActionResult, move_base_result_callback)
@@ -126,6 +138,7 @@ def main():
 
     # Find all target locations
     targets = [(i, j) for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] == 2]
+
     # Perform flood fill to generate the path
     path = flood_fill(start_pos, targets)
 
@@ -141,7 +154,7 @@ def main():
         rospy.sleep(1)  # Allow some time between movements
 
     # End move at the final destination
-    end_move = [(2, 0), (3, 0), (3, 1) ]  # Customize the end move position as desired
+    end_move = [(2, 0), (3, 0), (3, 1)]  # Customize the end move position as desired
     for grid_cell in end_move:
         x, y = convert_grid_to_real_world(grid_cell)
         if mba.moveToPoint(x, y, 0.0):
