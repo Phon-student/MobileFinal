@@ -106,7 +106,7 @@ def main():
     rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, pose_callback)
     rospy.Subscriber('/move_base/status', GoalStatusArray, move_base_status_callback)
     rospy.Subscriber('/move_base/result', MoveBaseActionResult, move_base_result_callback)
-    rospy.Subscriber('/aruco/detected', YourArucoMsgType, aruco_callback)  # Replace with your actual message type
+    rospy.Subscriber('/aruco/detected', YourArucoMsgType, aruco_callback)  # Replace with actual message type
 
     # Initialize the move_base action interface
     mba = moveBaseAction()
