@@ -140,21 +140,35 @@ def main():
     # Perform flood fill to generate the path
     path = flood_fill(start_pos, targets)
 
-    # Simulate following the path
+    # After the path is calculated, follow the path
     for grid_cell in path:
         x, y = convert_grid_to_real_world(grid_cell)
-        print(f"Simulated move to grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
-        rospy.sleep(1)  # Allow some time between simulated movements
+        theta = 0.0  # Assuming no rotation needed initially; adjust if required
+        if mba.moveToPoint(x, y, theta):
+            rospy.loginfo(f"Reached grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
+            rospy.sleep(5)  # Allow some time between movements
+        else:
+            rospy.logwarn(f"Failed to reach grid cell {grid_cell}")
+        rospy.sleep(1)  # Allow some time between movements
 
     # Simulate end move at the final destination
     end_move = [(2, 0), (3, 0), (3, 1)]  # Customize the end move position as desired
     for grid_cell in end_move:
         x, y = convert_grid_to_real_world(grid_cell)
-        print(f"Simulated move to end position at ({x:.2f}, {y:.2f})")
-        rospy.sleep(1)  # Allow some time between simulated movements
+        if mba.moveToPoint(x, y, 0.0):
+            rospy.loginfo(f"Reached the end move position at ({x:.2f}, {y:.2f})")
+        else:
+            rospy.logwarn("Failed to reach the end move position.")
+        rospy.sleep(1)  # Allow some time between movements
 
     rospy.loginfo("Path traversal and end move completed.")
     rospy.sleep(1)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == '__main__':
     try:
