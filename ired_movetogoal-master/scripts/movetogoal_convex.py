@@ -90,8 +90,11 @@ def orientation(p, q, r):
     """
     val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
     if val == 0:
+        # Handle collinear case by returning 0
+        # Optionally sort or check distance to select the next point
         return 0
     return 1 if val > 0 else -1
+
 
 def gift_wrapping_hull(points):
     """Gift Wrapping Algorithm (Jarvis March) to find the convex hull."""
@@ -108,10 +111,18 @@ def gift_wrapping_hull(points):
     while True:
         hull.append(points[point_on_hull])
         endpoint = (point_on_hull + 1) % n
+        
         for j in range(n):
             # Check if 'j' is more counterclockwise than 'endpoint'
             if orientation(points[point_on_hull], points[j], points[endpoint]) == -1:
                 endpoint = j
+            elif orientation(points[point_on_hull], points[j], points[endpoint]) == 0:
+                # If collinear, choose the farther one
+                dist_endpoint = np.linalg.norm(points[point_on_hull] - points[endpoint])
+                dist_j = np.linalg.norm(points[point_on_hull] - points[j])
+                if dist_j > dist_endpoint:
+                    endpoint = j
+        
         point_on_hull = endpoint
         if point_on_hull == leftmost:
             break
