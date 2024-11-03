@@ -28,6 +28,8 @@ start_pos = (3, 1)
 cell_size = 1.0  # approximately 1x1 meter grid cells
 
 current_pose = None  # Global variable to store the current pose
+aruco_message_received = False
+saved_positions = []  # List to save detected ArUco marker positions
 
 def convert_grid_to_real_world(grid_pos):
     """Convert grid coordinates to real-world coordinates."""
@@ -46,6 +48,19 @@ def move_base_status_callback(status):
 def move_base_result_callback(result):
     """Callback for move base result updates."""
     pass
+
+def aruco_position_callback(msg):
+    global aruco_message_received, saved_positions
+    aruco_message_received = True  # Set flag when a new message is received
+    rospy.loginfo("Received ArUco positions:")
+    rospy.loginfo(f"Number of markers found: {msg.number_found}")
+
+    for i in range(msg.number_found):
+        # Store the marker positions and IDs
+        position = (msg.x[i], msg.y[i])
+        marker_id = msg.id[i]
+        saved_positions.append((marker_id, position))  # Save marker ID and position
+        rospy.loginfo(f"Marker ID: {marker_id}, Position: {position}")
 
 class moveBaseAction():
     def __init__(self):
@@ -153,6 +168,7 @@ def main():
     rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, pose_callback)
     rospy.Subscriber('/move_base/status', GoalStatusArray, move_base_status_callback)
     rospy.Subscriber('/move_base/result', MoveBaseActionResult, move_base_result_callback)
+    rospy.Subscriber("/aruco_mps_explored", MPSPosition, aruco_position_callback)
 
     # Initialize the move_base action interface
     mba = moveBaseAction()
@@ -186,17 +202,29 @@ def main():
         x, y = point
         if mba.moveToPoint(x, y):
             rospy.loginfo(f"Reached convex hull point at ({x:.2f}, {y:.2f})")
-            rospy.sleep(5)
-            # wait for aruco marker detection to complete and then move to the next point
-            while not rospy.is_shutdown():
-                # Logic for ArUco marker detection
-                rospy.sleep(1)
-
+            
+            # Check if an ArUco message has been received before proceeding
+            rospy.loginfo("Waiting for ArUco message before moving to the next target...")
+            while not aruco_message_received:
+                rospy.sleep(0.1)  # Polling interval, can adjust as necessary
+            
+            # Reset the flag for the next iteration
+            aruco_message_received = False  
+            rospy.sleep(5)  # Optional delay after processing the ArUco message
         else:
             rospy.logwarn(f"Failed to reach convex hull point at ({x:.2f}, {y:.2f})")
+        
         rospy.sleep(1)  # Allow some time between movements
 
     rospy.loginfo("Completed navigation through convex hull points.")
 
-if __name__ == "__main__":
-    main()
+    # Log or process the saved positions after navigation
+    rospy.loginfo("Saved ArUco Marker Positions:")
+    for marker_id, position in saved_positions:
+        rospy.loginfo(f"Marker ID: {marker_id}, Position: {position}")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
