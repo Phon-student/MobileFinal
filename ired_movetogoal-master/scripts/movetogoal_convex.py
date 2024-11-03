@@ -41,11 +41,12 @@ def get_target_cells_from_input():
         target_cell = input("Enter the target cell (A-H) or 'q' to quit: ").upper()
         if target_cell == 'Q':
             break
-        if target_cell in map_a:
-            target_cells.append(map_a[target_cell])
+        if target_cell not in map_a:
+            print(f"Invalid cell name '{target_cell}'. Valid options are: {', '.join(map_a.keys())}")
         else:
-            print("Invalid cell name. Please enter a valid cell name.")
+            target_cells.append(map_a[target_cell])
     return target_cells
+
 
 # Starting position for the robot in the grid
 start_pos = (3, 1)
@@ -193,6 +194,15 @@ def main():
 
     # Initialize the move_base action interface
     mba = moveBaseAction()
+
+    initial_pos = [(3,0),(2,0)]
+    
+    for pos in initial_pos:
+        if mba.moveToPoint(*convert_grid_to_real_world(pos)):
+            rospy.loginfo(f"Reached the initial position at {pos}")
+        else:
+            rospy.logwarn("Failed to reach the initial position.")
+        rospy.sleep(1)  # Allow some time between movements
 
     # Collect all target cells in a list
     target_cells = get_target_cells_from_input()
