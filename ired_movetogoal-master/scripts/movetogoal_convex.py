@@ -38,7 +38,7 @@ map_a = {
 def get_target_cells_from_input():
     target_cells = []
     while True:
-        target_cell = input("Enter the target cell (A-H) or 'q' to quit: ").upper()
+        target_cell = input("Enter the target cell (A-B),(1-4):A1 or 'q' to quit: ").upper()
         if target_cell == 'Q':
             break
         if target_cell not in map_a:
@@ -198,7 +198,7 @@ def main():
     # Collect all target cells in a list
     target_cells = get_target_cells_from_input()
     
-    initial_pos = [(3,0),(2,0)]
+    initial_pos = [(3,0)]
     
     for pos in initial_pos:
         if mba.moveToPoint(*convert_grid_to_real_world(pos)):
@@ -215,7 +215,9 @@ def main():
     for point in hull_points:
         x, y = point
         if mba.moveToPoint(x, y):
+            # Log the successful movement
             rospy.loginfo(f"Reached hull point at ({x:.2f}, {y:.2f})")
+            rospy.loginfo(f"Current pose: {current_pose}")
             rospy.sleep(5)  # Allow some time between movements
         else:
             rospy.logwarn(f"Failed to reach hull point at ({x:.2f}, {y:.2f})")
@@ -224,6 +226,7 @@ def main():
     # End move to starting position
     if mba.moveToPoint(*convert_grid_to_real_world(start_pos)):
         rospy.loginfo(f"Reached the starting position at {start_pos}")
+        rospy.loginfo(f"Ending...")
     else:
         rospy.logwarn("Failed to reach the starting position.")
     rospy.loginfo("Path traversal and target cell visits completed.")
