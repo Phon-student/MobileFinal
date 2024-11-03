@@ -218,10 +218,26 @@ def main():
 
     rospy.loginfo("Completed navigation through convex hull points.")
 
-    # Log or process the saved positions after navigation
-    rospy.loginfo("Saved ArUco Marker Positions:")
-    for marker_id, position in saved_positions:
-        rospy.loginfo(f"Marker ID: {marker_id}, Position: {position}")
+    # Log or process the saved positions after navigation as text file
+    with open("saved_positions.txt", "w") as f:
+        for marker_id, position in saved_positions:
+            f.write(f"Marker ID: {marker_id}, Position: {position}\n")
+
+            
+    # End move at the final destination
+    end_move = [(2, 0), (3, 0), (3, 1)]  # Customize the end move position as desired
+
+    for grid_cell in end_move:
+        x, y = convert_grid_to_real_world(grid_cell)
+        if mba.moveToPoint(x, y):
+            rospy.loginfo(f"Reached the end move position at ({x:.2f}, {y:.2f})")
+        else:
+            rospy.logwarn("Failed to reach the end move position.")
+        rospy.sleep(1)
+
+    rospy.loginfo("Path traversal and convex hull navigation completed.")
+
+    
 
 if __name__ == '__main__':
     try:
