@@ -22,6 +22,31 @@ grid = [
     [0, 3],
 ]
 
+# Define a dictionary to map cell names to grid coordinates
+map_a = {
+    'B4': (0, 0),
+    'A4': (0, 1),
+    'B3': (1, 0),
+    'A3': (1, 1),
+    'B2': (2, 0),
+    'A2': (2, 1),
+    'B1': (3, 0),
+    'A1': (3, 1)
+}
+
+# Function to get target cells from user input
+def get_target_cells_from_input():
+    target_cells = []
+    while True:
+        target_cell = input("Enter the target cell (A-H) or 'q' to quit: ").upper()
+        if target_cell == 'Q':
+            break
+        if target_cell in map_a:
+            target_cells.append(map_a[target_cell])
+        else:
+            print("Invalid cell name. Please enter a valid cell name.")
+    return target_cells
+
 # Starting position for the robot in the grid
 start_pos = (3, 1)
 
@@ -169,52 +194,31 @@ def main():
     # Initialize the move_base action interface
     mba = moveBaseAction()
 
-    # Set initial moves
-    initial_moves = [(3, 0), (2, 0)]  # Customize the initial positions as needed
+    # Collect all target cells in a list
+    target_cells = get_target_cells_from_input()
 
-    # Execute initial moves
-    for grid_cell in initial_moves:
-        x, y = convert_grid_to_real_world(grid_cell)
-        if mba.moveToPoint(x, y):
-            rospy.loginfo(f"Reached initial grid cell {grid_cell} at ({x:.2f}, {y:.2f})")
-        else:
-            rospy.logwarn(f"Failed to reach initial grid cell {grid_cell}")
-        rospy.sleep(1)  # Small delay between moves
-
-    # Find all target locations in real-world coordinates
-    target_cells = [(i, j) for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] == 2]
+    # Traverse targets from gift wrapping hull
     target_points = np.array([convert_grid_to_real_world(cell) for cell in target_cells])
+    hull_points = fixed_five_point_hull(target_points)
 
-    # Compute the convex hull for target locations
-    if len(target_points) >= 3:  # Convex hull requires at least 3 points
-        hull_path = fixed_five_point_hull(target_points, fixed=True)  # Use fixed 5-point hull option
-        rospy.loginfo(f"Convex hull computed with {len(hull_path)} boundary points.")
-    else:
-        hull_path = target_points  # If less than 3 points, just use available points
-        rospy.loginfo(f"Only {len(hull_path)} target points, no convex hull needed.")
-
-    # Follow the convex hull path
-    for point in hull_path:
+    # Move to each point in the hull
+    for point in hull_points:
         x, y = point
         if mba.moveToPoint(x, y):
-            rospy.loginfo(f"Reached convex hull point at ({x:.2f}, {y:.2f})")
-            mba.move_base_action.cancel_goal()  # Cancel the goal to avoid waiting for completion
-            rospy.sleep(5)  # stop for 5 seconds at each point on the convex hull 
+            rospy.loginfo(f"Reached hull point at ({x:.2f}, {y:.2f})")
+            rospy.sleep(5)  # Allow some time between movements
         else:
-            rospy.logwarn(f"Failed to reach convex hull point at ({x:.2f}, {y:.2f})")
+            rospy.logwarn(f"Failed to reach hull point at ({x:.2f}, {y:.2f})")
         rospy.sleep(1)  # Allow some time between movements
 
-    # End move at the final destination
-    end_move = [(2, 0), (3, 0), (3, 1)]  # Customize the end move position as desired
-    for grid_cell in end_move:
-        x, y = convert_grid_to_real_world(grid_cell)
-        if mba.moveToPoint(x, y):
-            rospy.loginfo(f"Reached the end move position at ({x:.2f}, {y:.2f})")
-        else:
-            rospy.logwarn("Failed to reach the end move position.")
-        rospy.sleep(1)  # Allow some time between movements
+    # End move to starting position
+    if mba.moveToPoint(*convert_grid_to_real_world(start_pos)):
+        rospy.loginfo(f"Reached the starting position at {start_pos}")
+    else:
+        rospy.logwarn("Failed to reach the starting position.")
+    rospy.loginfo("Path traversal and target cell visits completed.")
+    rospy.sleep(1)
 
-    rospy.loginfo("Path traversal and convex hull navigation completed.")
 
 if __name__ == '__main__':
     try:
