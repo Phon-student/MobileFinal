@@ -16,9 +16,9 @@ from collections import deque
 
 # Grid configuration (0: free, 1: obstacle, 2: target, 3: end move)
 grid = [
-    [0, 2],
-    [2, 2],
-    [0, 2],
+    [0, 0],
+    [0, 0],
+    [0, 0],
     [0, 3],
 ]
 
