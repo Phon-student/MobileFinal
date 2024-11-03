@@ -195,6 +195,9 @@ def main():
     # Initialize the move_base action interface
     mba = moveBaseAction()
 
+    # Collect all target cells in a list
+    target_cells = get_target_cells_from_input()
+    
     initial_pos = [(3,0),(2,0)]
     
     for pos in initial_pos:
@@ -203,9 +206,6 @@ def main():
         else:
             rospy.logwarn("Failed to reach the initial position.")
         rospy.sleep(1)  # Allow some time between movements
-
-    # Collect all target cells in a list
-    target_cells = get_target_cells_from_input()
 
     # Traverse targets from gift wrapping hull
     target_points = np.array([convert_grid_to_real_world(cell) for cell in target_cells])
