@@ -185,6 +185,7 @@ def fixed_five_point_hull(points, fixed=True):
     return selected_points
 
 # Main program
+# Main program
 def main():
     rospy.init_node('move_to_goal', anonymous=True)
     publisher_goal = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
@@ -198,7 +199,7 @@ def main():
     # Collect all target cells in a list
     target_cells = get_target_cells_from_input()
     
-    initial_pos = [(3,0)]
+    initial_pos = [(2.35,0)]
     
     for pos in initial_pos:
         if mba.moveToPoint(*convert_grid_to_real_world(pos)):
@@ -214,13 +215,14 @@ def main():
     # Move to each point in the hull
     for point in hull_points:
         x, y = point
-        if mba.moveToPoint(x, y):
+        success = mba.moveToPoint(x, y)
+        if success:
             # Log the successful movement
             rospy.loginfo(f"Reached hull point at ({x:.2f}, {y:.2f})")
             rospy.loginfo(f"Current pose: {current_pose}")
             rospy.sleep(5)  # Allow some time between movements
         else:
-            rospy.logwarn(f"Failed to reach hull point at ({x:.2f}, {y:.2f})")
+            rospy.logwarn(f"Failed to reach hull point at ({x:.2f}, {y:.2f}), moving to next target.")
         rospy.sleep(1)  # Allow some time between movements
 
     # End move to starting position
@@ -232,6 +234,11 @@ def main():
     rospy.loginfo("Path traversal and target cell visits completed.")
     rospy.sleep(1)
 
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == '__main__':
     try:
